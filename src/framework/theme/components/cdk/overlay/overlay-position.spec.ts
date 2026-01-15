@@ -14,6 +14,7 @@ import {
   NbPosition,
   NbAdjustment,
   NbViewportRulerAdapter,
+  NbLayoutDirectionService,
 } from '@nebular/theme';
 
 @Injectable()
@@ -24,14 +25,14 @@ export class MockViewportRulerAdapter extends NbViewportRulerAdapter {
 }
 
 @Component({
-  template: `portal-component`,
+    template: `portal-component`,
+    standalone: false
 })
 export class PortalComponent {}
 
 @NgModule({
   declarations: [PortalComponent],
   exports: [PortalComponent],
-  entryComponents: [PortalComponent],
 })
 export class PortalModule {}
 
@@ -147,8 +148,12 @@ describe('NbAdjustableConnectedPositionStrategy', () => {
 
   it('should map left position to start', () => {
     const withPositionsSpy = spyOn(strategy, 'withPositions').and.callThrough();
+    const directionChangeService: NbLayoutDirectionService = TestBed.inject(NbLayoutDirectionService);
 
-    strategy.position(NbPosition.LEFT).adjustment(NbAdjustment.HORIZONTAL);
+    strategy
+      .position(NbPosition.LEFT)
+      .adjustment(NbAdjustment.HORIZONTAL)
+      .direction(directionChangeService.getDirection());
 
     const overlayService: NbOverlayService = TestBed.inject(NbOverlayService);
     overlayRef = overlayService.create({ positionStrategy: strategy });
@@ -164,8 +169,12 @@ describe('NbAdjustableConnectedPositionStrategy', () => {
 
   it('should map right position to end', () => {
     const withPositionsSpy = spyOn(strategy, 'withPositions').and.callThrough();
+    const directionChangeService: NbLayoutDirectionService = TestBed.inject(NbLayoutDirectionService);
 
-    strategy.position(NbPosition.RIGHT).adjustment(NbAdjustment.HORIZONTAL);
+    strategy
+      .position(NbPosition.RIGHT)
+      .adjustment(NbAdjustment.HORIZONTAL)
+      .direction(directionChangeService.getDirection());
 
     const overlayService: NbOverlayService = TestBed.inject(NbOverlayService);
     overlayRef = overlayService.create({ positionStrategy: strategy });

@@ -9,8 +9,6 @@ import {
   Renderer2,
   ViewChild,
   Type,
-  ComponentFactoryResolver,
-  Input,
   AfterViewChecked,
 } from '@angular/core';
 import { NbFocusTrap, NbFocusTrapFactoryService } from '../cdk/a11y/focus-trap';
@@ -20,12 +18,14 @@ import { NB_WINDOW_CONTENT, NbWindowConfig, NbWindowState, NB_WINDOW_CONTEXT } f
 import { NbWindowRef } from './window-ref';
 
 @Component({
-  selector: 'nb-window',
-  template: `
+    selector: 'nb-window',
+    template: `
     <nb-card>
       <nb-card-header>
         <div *ngIf="config.titleTemplate; else textTitleTemplate" cdkFocusInitial tabindex="-1">
-          <ng-container *ngTemplateOutlet="config.titleTemplate; context: {$implicit: config.titleTemplateContext}"></ng-container>
+          <ng-container
+            *ngTemplateOutlet="config.titleTemplate; context: { $implicit: config.titleTemplateContext }"
+          ></ng-container>
         </div>
 
         <ng-template #textTitleTemplate>
@@ -51,9 +51,11 @@ import { NbWindowRef } from './window-ref';
             </button>
           </ng-container>
 
-          <button nbButton ghost (click)="close()">
-            <nb-icon icon="close-outline" pack="nebular-essentials"></nb-icon>
-          </button>
+          <ng-container *ngIf="showClose">
+            <button nbButton ghost (click)="close()">
+              <nb-icon icon="close-outline" pack="nebular-essentials"></nb-icon>
+            </button>
+          </ng-container>
         </div>
       </nb-card-header>
       <nb-card-body *ngIf="maximized || isFullScreen">
@@ -61,11 +63,10 @@ import { NbWindowRef } from './window-ref';
       </nb-card-body>
     </nb-card>
   `,
-  styleUrls: ['./window.component.scss'],
+    styleUrls: ['./window.component.scss'],
+    standalone: false
 })
 export class NbWindowComponent implements OnInit, AfterViewChecked, OnDestroy {
-  @Input() cfr: ComponentFactoryResolver;
-
   @HostBinding('class.full-screen')
   get isFullScreen() {
     return this.windowRef.state === NbWindowState.FULL_SCREEN;
@@ -91,6 +92,10 @@ export class NbWindowComponent implements OnInit, AfterViewChecked, OnDestroy {
 
   get showFullScreen(): boolean {
     return this.config.buttons.fullScreen;
+  }
+
+  get showClose(): boolean {
+    return this.config.buttons.close;
   }
 
   @ViewChild(NbOverlayContainerComponent) overlayContainer: NbOverlayContainerComponent;
@@ -166,12 +171,13 @@ export class NbWindowComponent implements OnInit, AfterViewChecked, OnDestroy {
   }
 
   protected attachTemplate() {
-    this.overlayContainer
-      .attachTemplatePortal(new NbTemplatePortal(this.content as TemplateRef<any>, null, this.context));
+    this.overlayContainer.attachTemplatePortal(
+      new NbTemplatePortal(this.content as TemplateRef<any>, null, this.context),
+    );
   }
 
   protected attachComponent() {
-    const portal = new NbComponentPortal(this.content as Type<any>, null, null, this.cfr);
+    const portal = new NbComponentPortal(this.content as Type<any>, null, null);
     const ref = this.overlayContainer.attachComponentPortal(portal, this.context);
     this.windowRef.componentInstance = ref.instance;
 

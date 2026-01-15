@@ -14,7 +14,6 @@ import {
   OnInit,
   Output,
   EventEmitter,
-  SimpleChanges,
 } from '@angular/core';
 
 import { NbDynamicOverlay, NbDynamicOverlayController } from '../cdk/overlay/dynamic/dynamic-overlay';
@@ -26,7 +25,6 @@ import { NbOverlayConfig } from '../cdk/overlay/mapping';
 import { NbPopoverComponent } from './popover.component';
 import { takeUntil, skip } from 'rxjs/operators';
 import { Subject } from 'rxjs';
-
 
 /**
  * Powerful popover directive, which provides the best UX for your users.
@@ -113,12 +111,12 @@ import { Subject } from 'rxjs';
  * @additional-example(Custom Component, popover/popover-custom-component.component)
  * */
 @Directive({
-  selector: '[nbPopover]',
-  exportAs: 'nbPopover',
-  providers: [NbDynamicOverlayHandler, NbDynamicOverlay],
+    selector: '[nbPopover]',
+    exportAs: 'nbPopover',
+    providers: [NbDynamicOverlayHandler, NbDynamicOverlay],
+    standalone: false
 })
 export class NbPopoverDirective implements NbDynamicOverlayController, OnChanges, AfterViewInit, OnDestroy, OnInit {
-
   protected popoverComponent = NbPopoverComponent;
   protected dynamicOverlay: NbDynamicOverlay;
   protected destroy$ = new Subject<void>();
@@ -140,6 +138,7 @@ export class NbPopoverDirective implements NbDynamicOverlayController, OnChanges
    * Position will be calculated relatively host element based on the position.
    * Can be top, right, bottom, left, start or end.
    * */
+  // eslint-disable-next-line @angular-eslint/no-input-rename
   @Input('nbPopoverPlacement')
   position: NbPosition = NbPosition.TOP;
   static ngAcceptInputType_position: NbPositionValues;
@@ -173,6 +172,10 @@ export class NbPopoverDirective implements NbDynamicOverlayController, OnChanges
   @Input('nbPopoverOffset')
   offset = 15;
 
+  /** Disables the display of the tooltip. */
+  // eslint-disable-next-line @angular-eslint/no-input-rename
+  @Input('nbTooltipDisabled') disabled: boolean = false;
+
   @Input('nbPopoverClass')
   get popoverClass(): string {
     return this._popoverClass;
@@ -188,20 +191,16 @@ export class NbPopoverDirective implements NbDynamicOverlayController, OnChanges
   @Output()
   nbPopoverShowStateChange = new EventEmitter<{ isShown: boolean }>();
 
-  protected overlayConfig: NbOverlayConfig = { panelClass: this.popoverClass }
+  protected overlayConfig: NbOverlayConfig = { panelClass: this.popoverClass };
 
   get isShown(): boolean {
     return !!(this.dynamicOverlay && this.dynamicOverlay.isAttached);
   }
 
-  constructor(protected hostRef: ElementRef,
-              protected dynamicOverlayHandler: NbDynamicOverlayHandler) {
-  }
+  constructor(protected hostRef: ElementRef, protected dynamicOverlayHandler: NbDynamicOverlayHandler) {}
 
   ngOnInit() {
-    this.dynamicOverlayHandler
-      .host(this.hostRef)
-      .componentType(this.popoverComponent);
+    this.dynamicOverlayHandler.host(this.hostRef).componentType(this.popoverComponent);
   }
 
   ngOnChanges() {
@@ -209,20 +208,15 @@ export class NbPopoverDirective implements NbDynamicOverlayController, OnChanges
   }
 
   ngAfterViewInit() {
-    this.dynamicOverlay = this.configureDynamicOverlay()
-      .build();
+    this.dynamicOverlay = this.configureDynamicOverlay().build();
 
     this.dynamicOverlay.isShown
-      .pipe(
-        skip(1),
-        takeUntil(this.destroy$),
-      )
+      .pipe(skip(1), takeUntil(this.destroy$))
       .subscribe((isShown: boolean) => this.nbPopoverShowStateChange.emit({ isShown }));
   }
 
   rebuild() {
-    this.dynamicOverlay = this.configureDynamicOverlay()
-      .rebuild();
+    this.dynamicOverlay = this.configureDynamicOverlay().rebuild();
   }
 
   show() {
@@ -247,6 +241,7 @@ export class NbPopoverDirective implements NbDynamicOverlayController, OnChanges
     return this.dynamicOverlayHandler
       .position(this.position)
       .trigger(this.trigger)
+      .disabled(this.disabled)
       .offset(this.offset)
       .adjustment(this.adjustment)
       .content(this.content)

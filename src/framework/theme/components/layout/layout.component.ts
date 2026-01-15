@@ -5,8 +5,18 @@
  */
 
 import {
-  AfterViewInit, Component, ElementRef, HostBinding, HostListener, Input, OnDestroy,
-  Renderer2, ViewChild, ViewContainerRef, Inject, PLATFORM_ID,
+  AfterViewInit,
+  Component,
+  ElementRef,
+  HostBinding,
+  HostListener,
+  Input,
+  OnDestroy,
+  Renderer2,
+  ViewChild,
+  ViewContainerRef,
+  Inject,
+  PLATFORM_ID,
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { BehaviorSubject, Subject } from 'rxjs';
@@ -103,7 +113,6 @@ import { NbOverlayContainerAdapter } from '../cdk/adapter/overlay-container-adap
  * layout-min-height:
  * layout-content-width:
  * layout-window-mode-min-width:
- * layout-window-mode-max-width:
  * layout-window-mode-background-color:
  * layout-window-mode-padding-top:
  * layout-window-shadow:
@@ -115,9 +124,9 @@ import { NbOverlayContainerAdapter } from '../cdk/adapter/overlay-container-adap
  * layout-scrollbar-width:
  */
 @Component({
-  selector: 'nb-layout',
-  styleUrls: ['./layout.component.scss'],
-  template: `
+    selector: 'nb-layout',
+    styleUrls: ['./layout.component.scss'],
+    template: `
     <div class="scrollable-container" #scrollableContainer (scroll)="onScroll($event)">
       <div class="layout" #layoutContainer>
         <ng-content select="nb-layout-header:not([subheader])"></ng-content>
@@ -134,9 +143,9 @@ import { NbOverlayContainerAdapter } from '../cdk/adapter/overlay-container-adap
       </div>
     </div>
   `,
+    standalone: false
 })
 export class NbLayoutComponent implements AfterViewInit, OnDestroy {
-
   protected scrollBlockClass = 'nb-global-scrollblock';
   protected isScrollBlocked = false;
   protected scrollableContainerOverflowOldValue: string;
@@ -206,7 +215,7 @@ export class NbLayoutComponent implements AfterViewInit, OnDestroy {
   // TODO remove as of 5.0.0
   @ViewChild('layoutTopDynamicArea', { read: ViewContainerRef }) veryTopRef: ViewContainerRef;
 
-  @ViewChild('scrollableContainer', { read: ElementRef })
+  @ViewChild('scrollableContainer', { read: ElementRef, static: true })
   scrollableContainerRef: ElementRef<HTMLElement>;
 
   @ViewChild('layoutContainer', { read: ElementRef })
@@ -232,10 +241,9 @@ export class NbLayoutComponent implements AfterViewInit, OnDestroy {
   ) {
     this.registerAsOverlayContainer();
 
-    this.themeService.onThemeChange()
-      .pipe(
-        takeUntil(this.destroy$),
-      )
+    this.themeService
+      .onThemeChange()
+      .pipe(takeUntil(this.destroy$))
       .subscribe((theme: any) => {
         const body = this.document.getElementsByTagName('body')[0];
         if (theme.previous) {
@@ -244,45 +252,56 @@ export class NbLayoutComponent implements AfterViewInit, OnDestroy {
         this.renderer.addClass(body, `nb-theme-${theme.name}`);
       });
 
-    this.themeService.onAppendLayoutClass()
-      .pipe(
-        takeUntil(this.destroy$),
-      )
+    this.themeService
+      .onAppendLayoutClass()
+      .pipe(takeUntil(this.destroy$))
       .subscribe((className: string) => {
         this.renderer.addClass(this.elementRef.nativeElement, className);
       });
 
-    this.themeService.onRemoveLayoutClass()
-      .pipe(
-        takeUntil(this.destroy$),
-      )
+    this.themeService
+      .onRemoveLayoutClass()
+      .pipe(takeUntil(this.destroy$))
       .subscribe((className: string) => {
         this.renderer.removeClass(this.elementRef.nativeElement, className);
       });
 
-    this.spinnerService.registerLoader(new Promise<void>((resolve) => {
-      this.afterViewInit$
-        .pipe(
-          takeUntil(this.destroy$),
-        )
-        .subscribe((_) => resolve());
-    }));
+    this.spinnerService.registerLoader(
+      new Promise<void>((resolve) => {
+        this.afterViewInit$.pipe(takeUntil(this.destroy$)).subscribe((_) => resolve());
+      }),
+    );
     this.spinnerService.load();
 
-    this.rulerService.onGetDimensions()
-      .pipe(
-        takeUntil(this.destroy$),
-      )
+    this.rulerService
+      .onGetDimensions()
+      .pipe(takeUntil(this.destroy$))
       .subscribe(({ listener }) => {
         listener.next(this.getDimensions());
         listener.complete();
       });
 
     this.scrollService
-      .onScrollableChange()
+      .onGetPosition()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(({ listener }) => {
+        listener.next(this.getScrollPosition());
+        listener.complete();
+      });
+
+    this.scrollTop
+      .shouldRestore()
       .pipe(
-        filter(() => this.withScrollValue),
+        filter(() => this.restoreScrollTopValue),
+        takeUntil(this.destroy$),
       )
+      .subscribe(() => {
+        this.scroll(0, 0);
+      });
+
+    this.scrollService
+      .onScrollableChange()
+      .pipe(filter(() => this.withScrollValue), takeUntil(this.destroy$))
       .subscribe((scrollable: boolean) => {
         /**
          * In case when Nebular Layout custom scroll `withScroll` mode is enabled
@@ -303,25 +322,13 @@ export class NbLayoutComponent implements AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit() {
-    this.scrollService.onGetPosition()
+    this.layoutDirectionService
+      .onDirectionChange()
       .pipe(takeUntil(this.destroy$))
-      .subscribe(({ listener }) => {
-        listener.next(this.getScrollPosition());
-        listener.complete();
-      });
+      .subscribe((direction) => (this.document.dir = direction));
 
-    this.scrollTop.shouldRestore()
-      .pipe(filter(
-        () => this.restoreScrollTopValue),
-        takeUntil(this.destroy$),
-      )
-      .subscribe(() => this.scroll(0, 0));
-
-    this.layoutDirectionService.onDirectionChange()
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(direction => this.document.dir = direction);
-
-    this.scrollService.onManualScroll()
+    this.scrollService
+      .onManualScroll()
       .pipe(takeUntil(this.destroy$))
       .subscribe(({ x, y }: NbScrollPosition) => this.scroll(x, y));
 
@@ -352,7 +359,10 @@ export class NbLayoutComponent implements AfterViewInit, OnDestroy {
    * @returns {NbLayoutDimensions}
    */
   getDimensions(): NbLayoutDimensions {
-    let clientWidth, clientHeight, scrollWidth, scrollHeight = 0;
+    let clientWidth,
+      clientHeight,
+      scrollWidth,
+      scrollHeight = 0;
     if (this.withScrollValue) {
       const container = this.scrollableContainerRef.nativeElement;
       clientWidth = container.clientWidth;
@@ -395,12 +405,19 @@ export class NbLayoutComponent implements AfterViewInit, OnDestroy {
 
     const documentRect = this.document.documentElement.getBoundingClientRect();
 
-    const x = -documentRect.left || this.document.body.scrollLeft || this.window.scrollX ||
-      this.document.documentElement.scrollLeft || 0;
+    const x =
+      -documentRect.left ||
+      this.document.body.scrollLeft ||
+      this.window.scrollX ||
+      this.document.documentElement.scrollLeft ||
+      0;
 
-    const y = -documentRect.top || this.document.body.scrollTop || this.window.scrollY ||
-      this.document.documentElement.scrollTop || 0;
-
+    const y =
+      -documentRect.top ||
+      this.document.body.scrollTop ||
+      this.window.scrollY ||
+      this.document.documentElement.scrollTop ||
+      0;
 
     return { x, y };
   }
@@ -501,13 +518,11 @@ export class NbLayoutComponent implements AfterViewInit, OnDestroy {
  * @stacked-example(Column Left, layout/layout-column-left.component)
  */
 @Component({
-  selector: 'nb-layout-column',
-  template: `
-    <ng-content></ng-content>
-  `,
+    selector: 'nb-layout-column',
+    template: `<ng-content></ng-content>`,
+    standalone: false
 })
 export class NbLayoutColumnComponent {
-
   @HostBinding('class.left') leftValue: boolean;
   @HostBinding('class.start') startValue: boolean;
 
@@ -567,15 +582,15 @@ export class NbLayoutColumnComponent {
  * header-shadow:
  */
 @Component({
-  selector: 'nb-layout-header',
-  template: `
+    selector: 'nb-layout-header',
+    template: `
     <nav [class.fixed]="fixedValue">
       <ng-content></ng-content>
     </nav>
   `,
+    standalone: false
 })
 export class NbLayoutHeaderComponent {
-
   @HostBinding('class.fixed') fixedValue: boolean;
   @HostBinding('class.subheader') subheaderValue: boolean;
 
@@ -627,15 +642,15 @@ export class NbLayoutHeaderComponent {
  * footer-shadow:
  */
 @Component({
-  selector: 'nb-layout-footer',
-  template: `
+    selector: 'nb-layout-footer',
+    template: `
     <nav [class.fixed]="fixedValue">
       <ng-content></ng-content>
     </nav>
   `,
+    standalone: false
 })
 export class NbLayoutFooterComponent {
-
   @HostBinding('class.fixed') fixedValue: boolean;
 
   /**
@@ -647,5 +662,4 @@ export class NbLayoutFooterComponent {
     this.fixedValue = convertToBoolProperty(val);
   }
   static ngAcceptInputType_fixed: NbBooleanInput;
-
 }

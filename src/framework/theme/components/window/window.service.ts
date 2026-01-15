@@ -1,5 +1,4 @@
 import {
-  ComponentFactoryResolver,
   ComponentRef,
   Inject,
   Injectable,
@@ -8,12 +7,7 @@ import {
   ViewContainerRef,
 } from '@angular/core';
 import { filter } from 'rxjs/operators';
-import {
-  NbComponentPortal,
-  NbComponentType,
-  NbOverlayPositionBuilder,
-  NbOverlayRef,
-} from '../cdk/overlay/mapping';
+import { NbComponentPortal, NbComponentType, NbOverlayPositionBuilder, NbOverlayRef } from '../cdk/overlay/mapping';
 import { NbOverlayService } from '../cdk/overlay/overlay-service';
 import { NbBlockScrollStrategyAdapter } from '../cdk/adapter/block-scroll-strategy-adapter';
 import {
@@ -91,6 +85,11 @@ import { NB_DOCUMENT } from '../../theme.options';
  *
  * @stacked-example(Window content from TemplateRef, window/template-window.component)
  *
+ * You could pass the optional window return value to the `NbWindowRef.close` method.
+ * The passed value would be emitted to the `NbWindowRef.onClose` listeners.
+ *
+ * @stacked-example(Result, window/window-result.component)
+ *
  * ### Configuration
  *
  * As mentioned above, `open` method of the `NbWindowService` may receive optional configuration options.
@@ -105,19 +104,16 @@ import { NB_DOCUMENT } from '../../theme.options';
  */
 @Injectable()
 export class NbWindowService {
-
   protected document: Document;
   protected overlayRef: NbOverlayRef;
   protected windowsContainerViewRef: ViewContainerRef;
   protected openWindows: NbWindowRef[] = [];
 
   constructor(
-    protected componentFactoryResolver: ComponentFactoryResolver,
     protected overlayService: NbOverlayService,
     protected overlayPositionBuilder: NbOverlayPositionBuilder,
     protected blockScrollStrategy: NbBlockScrollStrategyAdapter,
     @Inject(NB_WINDOW_CONFIG) protected readonly defaultWindowsConfig: NbWindowConfig,
-    protected cfr: ComponentFactoryResolver,
     @Inject(NB_DOCUMENT) document,
   ) {
     this.document = document;
@@ -128,10 +124,7 @@ export class NbWindowService {
    * @param windowContent
    * @param windowConfig
    * */
-  open(
-    windowContent: TemplateRef<any> | NbComponentType,
-    windowConfig: Partial<NbWindowConfig> = {},
-  ): NbWindowRef {
+  open(windowContent: TemplateRef<any> | NbComponentType, windowConfig: Partial<NbWindowConfig> = {}): NbWindowRef {
     if (this.shouldCreateWindowsContainer()) {
       this.createWindowsContainer();
     }
@@ -165,7 +158,7 @@ export class NbWindowService {
       positionStrategy: this.overlayPositionBuilder.global().bottom().right(),
       hasBackdrop: true,
     });
-    const windowsContainerPortal = new NbComponentPortal(NbWindowsContainerComponent, null, null, this.cfr);
+    const windowsContainerPortal = new NbComponentPortal(NbWindowsContainerComponent, null, null);
     const overlayRef = this.overlayRef.attach(windowsContainerPortal);
     this.windowsContainerViewRef = overlayRef.instance.viewContainerRef;
   }
@@ -175,9 +168,7 @@ export class NbWindowService {
     config: NbWindowConfig,
     windowRef: NbWindowRef,
   ): ComponentRef<NbWindowComponent> {
-    const context = content instanceof TemplateRef
-      ? { $implicit: config.context, windowRef }
-      : config.context;
+    const context = content instanceof TemplateRef ? { $implicit: config.context, windowRef } : config.context;
 
     const providers = [
       { provide: NB_WINDOW_CONTENT, useValue: content },
@@ -189,10 +180,11 @@ export class NbWindowService {
       ? config.viewContainerRef.injector
       : this.windowsContainerViewRef.injector;
     const injector = Injector.create({ parent: parentInjector, providers });
-    const windowFactory = this.componentFactoryResolver.resolveComponentFactory(NbWindowComponent);
 
-    const ref = this.windowsContainerViewRef.createComponent(windowFactory, null, injector);
-    ref.instance.cfr = this.cfr;
+    const ref = this.windowsContainerViewRef.createComponent(NbWindowComponent, {
+      injector,
+      index: this.windowsContainerViewRef.length,
+    });
     ref.changeDetectorRef.detectChanges();
     return ref;
   }
@@ -203,7 +195,8 @@ export class NbWindowService {
     }
 
     if (windowRef.config.closeOnEsc) {
-      this.overlayRef.keydownEvents()
+      this.overlayRef
+        .keydownEvents()
         .pipe(filter((event: KeyboardEvent) => event.keyCode === 27))
         .subscribe(() => windowRef.close());
     }
@@ -217,14 +210,14 @@ export class NbWindowService {
   }
 
   protected checkAndUpdateOverlay() {
-    const fullScreenWindows = this.openWindows.filter(w => w.state === NbWindowState.FULL_SCREEN);
+    const fullScreenWindows = this.openWindows.filter((w) => w.state === NbWindowState.FULL_SCREEN);
     if (fullScreenWindows.length > 0) {
       this.blockScrollStrategy.enable();
     } else {
       this.blockScrollStrategy.disable();
     }
 
-    if (fullScreenWindows.some(w => w.config.hasBackdrop)) {
+    if (fullScreenWindows.some((w) => w.config.hasBackdrop)) {
       this.overlayRef.backdropElement.removeAttribute('hidden');
     } else {
       this.overlayRef.backdropElement.setAttribute('hidden', '');

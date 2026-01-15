@@ -119,8 +119,9 @@ export interface NbContextMenuContext {
  * @stacked-example(Manual Control, context-menu/context-menu-right-click.component)
  * */
 @Directive({
-  selector: '[nbContextMenu]',
-  providers: [NbDynamicOverlayHandler, NbDynamicOverlay],
+    selector: '[nbContextMenu]',
+    providers: [NbDynamicOverlayHandler, NbDynamicOverlay],
+    standalone: false
 })
 export class NbContextMenuDirective implements NbDynamicOverlayController, OnChanges, AfterViewInit, OnDestroy, OnInit {
 
@@ -275,7 +276,7 @@ export class NbContextMenuDirective implements NbDynamicOverlayController, OnCha
   private subscribeOnItemClick() {
     this.menuService.onItemClick()
       .pipe(
-        filter(({ tag }) => tag === this.tag),
+        filter(({ tag }) => tag === this.tag && this.trigger !== NbTrigger.NOOP),
         takeUntil(this.destroy$),
       )
       .subscribe(() => this.hide());
